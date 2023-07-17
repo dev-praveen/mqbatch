@@ -2,14 +2,7 @@ package com.praveen.mqbatch.config;
 
 import com.praveen.mqbatch.entity.Employee;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.Binding;
-import org.springframework.amqp.core.BindingBuilder;
-import org.springframework.amqp.core.Queue;
-import org.springframework.amqp.core.TopicExchange;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -33,36 +26,7 @@ import javax.sql.DataSource;
 public class MqBatchConfiguration {
 
   @Autowired private DataSource dataSource;
-  @Autowired private ConnectionFactory connectionFactory;
-
-  @Bean
-  public Queue queue() {
-    return new Queue("employees_queue");
-  }
-
-  @Bean
-  public TopicExchange exchange() {
-    return new TopicExchange("employees_exchange");
-  }
-
-  @Bean
-  public Binding binding(Queue queue, TopicExchange exchange) {
-    return BindingBuilder.bind(queue).to(exchange).with("employees_routingKey");
-  }
-
-  @Bean
-  public MessageConverter converter() {
-    return new Jackson2JsonMessageConverter();
-  }
-
-  @Bean
-  public RabbitTemplate rabbitTemplate() {
-    final RabbitTemplate rabbit = new RabbitTemplate(connectionFactory);
-    rabbit.setRoutingKey("employees_routingKey");
-    rabbit.setExchange("employees_exchange");
-    rabbit.setMessageConverter(converter());
-    return rabbit;
-  }
+  @Autowired private RabbitTemplate rabbitTemplate;
 
   @Bean
   public JdbcCursorItemReader<Employee> itemReader() {
@@ -86,7 +50,7 @@ public class MqBatchConfiguration {
 
   @Bean
   public AmqpItemWriter<Employee> itemWriter() {
-    return new AmqpItemWriterBuilder<Employee>().amqpTemplate(rabbitTemplate()).build();
+    return new AmqpItemWriterBuilder<Employee>().amqpTemplate(rabbitTemplate).build();
   }
 
   @Bean
@@ -104,9 +68,9 @@ public class MqBatchConfiguration {
   public TaskExecutor taskExecutor() {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
     executor.setThreadNamePrefix("Custom-Thread_");
-    executor.setCorePoolSize(10);
-    executor.setMaxPoolSize(20);
-    executor.setQueueCapacity(100);
+    executor.setCorePoolSize(5);
+    executor.setMaxPoolSize(10);
+    executor.setQueueCapacity(30);
     return executor;
   }
 
